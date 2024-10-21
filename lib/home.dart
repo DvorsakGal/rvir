@@ -10,12 +10,19 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  // PRIVATNE SPREMENLJIVKE:
   final _formGlobalKey = GlobalKey<FormState>();
   Workplace _selectedWorkplace = Workplace.developer;
   String _name = "";
   String _surname = "";
 
   final List<Vnos> employees = [];
+
+  TextEditingController _dateController = TextEditingController();
+  TextEditingController _arrivalTimeController = TextEditingController();
+  TextEditingController _departureTimeController = TextEditingController();
+
+  TimeOfDay _selectedTime = TimeOfDay.now();
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +92,48 @@ class _HomeState extends State<Home> {
                     },
                   ),
 
+                  //Datum rojstva
+                  TextFormField(
+                    controller: _dateController,
+                    decoration: const InputDecoration(
+                      label: Text("Date of birth"),
+                      filled: true,
+                      prefixIcon: Icon(Icons.calendar_today),
+                    ),
+                    readOnly: true,
+                    onTap: () {
+                      _selectDate();
+                    },
+                  ),
+
+                  // Ura prihoda
+                  TextFormField(
+                    controller: _arrivalTimeController,
+                    decoration: const InputDecoration(
+                      label: Text("Arrival time"),
+                      filled: true,
+                      prefixIcon: Icon(Icons.access_time),
+                    ),
+                    readOnly: true,
+                    onTap: () {
+                      _selectTime(_arrivalTimeController);
+                    },
+                  ),
+
+                  // Ura odhoda
+                  TextFormField(
+                    controller: _departureTimeController,
+                    decoration: const InputDecoration(
+                      label: Text("Departure time"),
+                      filled: true,
+                      prefixIcon: Icon(Icons.access_time),
+                    ),
+                    readOnly: true,
+                    onTap: () {
+                      _selectTime(_departureTimeController);
+                    },
+                  ),
+
                   const SizedBox(
                     height: 20,
                   ),
@@ -105,6 +154,9 @@ class _HomeState extends State<Home> {
 
                         _formGlobalKey.currentState!.reset();
                         _selectedWorkplace = Workplace.developer;
+                        _dateController.clear();
+                        _arrivalTimeController.clear();
+                        _departureTimeController.clear();
                       }
                     },
                     style: FilledButton.styleFrom(
@@ -133,5 +185,36 @@ class _HomeState extends State<Home> {
         ),
       ),
     );
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? _picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1940),
+      lastDate: DateTime(2100),
+    );
+
+    if (_picked != null) {
+      setState(() {
+        _dateController.text = _picked.toString().split(" ")[0];
+      });
+    }
+  }
+
+  Future<void> _selectTime(TextEditingController myController) async {
+    final TimeOfDay? timeOfDay = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      initialEntryMode: TimePickerEntryMode.dial,
+    );
+    if (timeOfDay != null) {
+      setState(() {
+        _selectedTime = timeOfDay;
+        // formatiranje časa
+        final formattedTime = timeOfDay.format(context);
+        myController.text = formattedTime;
+      });
+    }
   }
 }
