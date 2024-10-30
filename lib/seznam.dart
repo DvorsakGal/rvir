@@ -16,12 +16,16 @@ class _SeznamState extends State<Seznam> {
     return ListView.builder(
       itemCount: widget.employees.length,
       itemBuilder: (_, index) {
+        // Map workplaceIndex to the actual Workplace enum
+        Workplace workplace =
+            Workplace.values[widget.employees[index].workplaceIndex];
+
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color: widget.employees[index].workplace.color.withOpacity(0.5),
+                color: workplace.color.withOpacity(0.5),
               ),
               padding: const EdgeInsets.only(left: 12),
               child: Row(
@@ -37,15 +41,19 @@ class _SeznamState extends State<Seznam> {
                           Text(widget.employees[index].surname,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                              )),
+                          Text(widget.employees[index].email,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ))
                         ]),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
-                        color: widget.employees[index].workplace.color,
+                        color: workplace.color,
                       ),
-                      child: Text(widget.employees[index].workplace.title),
+                      child: Text(workplace.title),
                     ),
                   ])),
         );

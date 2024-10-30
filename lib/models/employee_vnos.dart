@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+part 'employee_vnos.g.dart';
 
 enum Workplace {
   developer(color: Colors.red, title: "Dev"),
@@ -13,11 +15,22 @@ enum Workplace {
   const Workplace({required this.color, required this.title});
 }
 
+@HiveType(typeId: 0)
 class Vnos {
+  @HiveField(0)
   final String name;
+  @HiveField(1)
   final String surname;
-  final Workplace workplace;
+  @HiveField(3)
+  final int workplaceIndex;
+  @HiveField(4)
+  final String email;
 
   const Vnos(
-      {required this.name, required this.surname, required this.workplace});
+      {required this.name,
+      required this.surname,
+      required this.workplaceIndex,
+      required this.email});
+
+  Workplace getWorkplace() => Workplace.values[workplaceIndex];
 }

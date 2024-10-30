@@ -2,8 +2,13 @@ import 'package:employee_manager_2/models/employee_vnos.dart';
 import 'package:employee_manager_2/seznam.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  //Initialize Hive
+  await Hive.initFlutter();
+  Hive.registerAdapter(VnosAdapter());
+  await Hive.openBox<Vnos>('vnosi');
   runApp(const MyApp());
 }
 
@@ -26,11 +31,15 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
+  //initialize hive box
+  final Box<Vnos> _vnosBox = Hive.box<Vnos>('vnosi');
+
   // PRIVATNE SPREMENLJIVKE:
   final _formGlobalKey = GlobalKey<FormState>();
   Workplace _selectedWorkplace = Workplace.developer;
   String _name = "";
   String _surname = "";
+  String _email = "";
 
   final List<Vnos> employees = [];
 
@@ -39,6 +48,28 @@ class MyAppState extends ChangeNotifier {
   TextEditingController _departureTimeController = TextEditingController();
 
   TimeOfDay _selectedTime = TimeOfDay.now();
+
+  MyAppState() {
+    _loadEmployees();
+  }
+
+  void _loadEmployees() {
+    employees.clear();
+    employees.addAll(_vnosBox.values);
+    notifyListeners();
+  }
+
+  void addEmployee(Vnos newEmployee) {
+    _vnosBox.add(newEmployee);
+    employees.add(newEmployee);
+    notifyListeners();
+  }
+
+  void clearEmployees() {
+    _vnosBox.clear();
+    employees.clear();
+    notifyListeners();
+  }
 }
 
 //naredi starting page z navom
@@ -191,6 +222,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
+                  //email
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      label: Text("Your email"),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Please input your email";
+                      }
+                      return null;
+                    },
+                    onSaved: (newValue) {
+                      appState._email = newValue!;
+                    },
+                  ),
+
                   //Datum rojstva
                   TextFormField(
                     controller: appState._dateController,
@@ -243,13 +290,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (appState._formGlobalKey.currentState!.validate()) {
                         appState._formGlobalKey.currentState!.save();
 
-                        setState(() {
-                          appState.employees.add(Vnos(
+                        final newEmployee = Vnos(
                             name: appState._name,
                             surname: appState._surname,
-                            workplace: appState._selectedWorkplace,
-                          ));
-                        });
+                            workplaceIndex: appState._selectedWorkplace.index,
+                            email: appState._email);
+
+                        appState.addEmployee(newEmployee);
 
                         appState._formGlobalKey.currentState!.reset();
                         appState._selectedWorkplace = Workplace.developer;
