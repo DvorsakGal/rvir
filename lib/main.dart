@@ -34,6 +34,9 @@ class MyAppState extends ChangeNotifier {
   //initialize hive box
   final Box<Vnos> _vnosBox = Hive.box<Vnos>('vnosi');
 
+  // Employee currently being edited (if any)
+  Vnos? currentlyEditingEmployee;
+
   // PRIVATNE SPREMENLJIVKE:
   final _formGlobalKey = GlobalKey<FormState>();
   Workplace _selectedWorkplace = Workplace.developer;
@@ -43,6 +46,10 @@ class MyAppState extends ChangeNotifier {
 
   final List<Vnos> employees = [];
 
+  // Controllers for form fields
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   TextEditingController _dateController = TextEditingController();
   TextEditingController _arrivalTimeController = TextEditingController();
   TextEditingController _departureTimeController = TextEditingController();
@@ -65,9 +72,51 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deleteEmployee(Vnos employee) {
+    int index = employees.indexOf(employee);
+    if (index != -1) {
+      _vnosBox.delete(index); //remove from hive box
+      employees.removeAt(index); //remove from list
+      notifyListeners();
+    }
+  }
+
   void clearEmployees() {
     _vnosBox.clear();
     employees.clear();
+    notifyListeners();
+  }
+
+  // EDIT EMPLOYEE
+  void editEmployee(Vnos employee) {
+    currentlyEditingEmployee = employee;
+    _nameController.text = employee.name;
+    _surnameController.text = employee.surname;
+    _emailController.text = employee.email;
+    _selectedWorkplace = Workplace.values[employee.workplaceIndex];
+
+    notifyListeners();
+  }
+
+  // posodobi obstoječega zaposlenega
+  void updateEmployee(Vnos updatedEmployee) {
+    int index = employees.indexOf(currentlyEditingEmployee!);
+    employees[index] = updatedEmployee;
+    _vnosBox.putAt(index, updatedEmployee);
+    currentlyEditingEmployee = null;
+    notifyListeners();
+  }
+
+  // reset editing state after submission
+  void resetForm() {
+    currentlyEditingEmployee = null;
+    _nameController.clear();
+    _surnameController.clear();
+    _emailController.clear();
+    _selectedWorkplace = Workplace.developer;
+    _dateController.clear();
+    _arrivalTimeController.clear();
+    _departureTimeController.clear();
     notifyListeners();
   }
 }
@@ -81,18 +130,25 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = [
-    HomeScreen(),
-    EmployeeLogsScreen(),
-  ];
+  void switchTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Defining tabs within the build method
+    final List<Widget> tabs = [
+      HomeScreen(),
+      EmployeeLogsScreen(onTabChange: switchTab),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Employer Manager"),
       ),
-      body: _tabs[_currentIndex],
+      body: tabs[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
@@ -173,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // ime
                   TextFormField(
+                    controller: appState._nameController,
                     decoration: const InputDecoration(
                       label: Text("Your name"),
                     ),
@@ -189,6 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   //priimek
                   TextFormField(
+                    controller: appState._surnameController,
                     decoration: const InputDecoration(
                       label: Text("Your surname"),
                     ),
@@ -224,6 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   //email
                   TextFormField(
+                    controller: appState._emailController,
                     decoration: const InputDecoration(
                       label: Text("Your email"),
                     ),
@@ -296,13 +355,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             workplaceIndex: appState._selectedWorkplace.index,
                             email: appState._email);
 
-                        appState.addEmployee(newEmployee);
+                        if (appState.currentlyEditingEmployee != null) {
+                          appState.updateEmployee(newEmployee);
+                        } else {
+                          appState.addEmployee(newEmployee);
+                        }
 
+                        appState.resetForm();
+                        /*
                         appState._formGlobalKey.currentState!.reset();
                         appState._selectedWorkplace = Workplace.developer;
                         appState._dateController.clear();
                         appState._arrivalTimeController.clear();
                         appState._departureTimeController.clear();
+                        */
                       }
                     },
                     style: FilledButton.styleFrom(
@@ -311,7 +377,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    child: const Text("Submit"),
+                    child: Text(appState.currentlyEditingEmployee == null
+                        ? "Submit"
+                        : "Update"),
                   )
                 ],
               ),
@@ -324,6 +392,10 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class EmployeeLogsScreen extends StatelessWidget {
+  final Function(int) onTabChange;
+
+  EmployeeLogsScreen({required this.onTabChange});
+
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
@@ -339,8 +411,33 @@ class EmployeeLogsScreen extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            child: Seznam(employees: appState.employees),
+            child: Seznam(
+              employees: appState.employees,
+              onDelete: (employee) {
+                appState.deleteEmployee(employee);
+              },
+              onEdit: (employee) {
+                appState.editEmployee(
+                    employee); // Load employee data into form for editing
+                onTabChange(0);
+              },
+            ),
           ),
+          ElevatedButton(
+            onPressed: () {
+              appState.clearEmployees();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text(
+              "Delete All Entries",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          )
         ],
       ),
     );
